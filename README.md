@@ -9,7 +9,7 @@ Extension to Ultimate Member for importing Profile photos. When importing Users 
 ### Supported mime types
 image/gif, image/jpeg, image/jpg, image/png, image/bmp
 ### Cropping
-Rectangular images are cropped to square images.
+Rectangular images are cropped to square images. Vertical rectangle are cropped top square, horizontal mid square.
 ### Resizing
 Images are resized according to UM Settings -> General -> Uploads -> "Profile Photo Thumbnail Sizes (px)"
 ### Quality
