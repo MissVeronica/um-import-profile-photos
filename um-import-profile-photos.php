@@ -2,7 +2,7 @@
 /**
  * Plugin Name:         Ultimate Member - Import Profile Photos
  * Description:         Extension to Ultimate Member for importing Profile photos.
- * Version:             1.0.0
+ * Version:             1.1.0
  * Requires PHP:        7.4
  * Author:              Miss Veronica
  * License:             GPL v3 or later
@@ -29,7 +29,8 @@ class UM_Import_Profile_Photos {
 
         define( 'Plugin_Basename_IPP', plugin_basename( __FILE__ ));
 
-        add_action( 'um_profile_before_header', array( $this, 'add_new_imported_profile_photos' ), 10, 1 );
+        add_filter( 'um_pre_args_setup',         array( $this, 'add_new_imported_profile_photos' ), 10, 1 );
+        add_filter( 'um_predefined_fields_hook', array( $this, 'predefined_fields_hook_import_profile_photos' ), 10, 1 );
 
         if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
 
@@ -48,15 +49,34 @@ class UM_Import_Profile_Photos {
 
     public function add_new_imported_profile_photos( $args ) {
 
+        global $current_user;
+
+        if ( $args['mode'] != 'profile' ) {
+            return $args;
+        }
+
         $user_id = um_user( 'ID' );
         $profile_photo = get_user_meta( $user_id, 'profile_photo', true );
+
         if ( empty( $profile_photo ) || UM()->options()->get( 'profile_import_photo_reuse_key' ) == 1 ) {
+
+            $user_path = $this->get_um_filesystem( 'base_dir' ) . $user_id . DIRECTORY_SEPARATOR;
+
+            if ( ! empty( $profile_photo ) && $current_user->ID != $user_id ) {
+
+                if ( filemtime( $user_path . $profile_photo ) + HOUR_IN_SECONDS > time()) {
+                    return $args;
+                }
+            }
+
+            if ( $current_user->ID == $user_id && UM()->options()->get( 'profile_import_photo_reuse_key' ) == 1 ) {
+                $args['disable_photo_upload'] = 1;
+            }
 
             $meta_key = sanitize_text_field( UM()->options()->get( 'profile_import_photo_key' ));
             if ( ! empty( $meta_key ) && $meta_key != 'profile_photo' ) {
 
                 $source_path = um_user( $meta_key );
-                $user_path   = $this->get_um_filesystem( 'base_dir' ) . $user_id . DIRECTORY_SEPARATOR;
 
                 if ( ! empty( $source_path )) {
 
@@ -64,7 +84,7 @@ class UM_Import_Profile_Photos {
 
                     if ( str_contains( $source_path, '/wp-content/uploads/' )) {
 
-                        if ( ! substr( $source_path, 0, strlen( ABSPATH )) !== ABSPATH ) {
+                        if ( substr( $source_path, 0, strlen( ABSPATH )) !== ABSPATH ) {
                             $source_path = ABSPATH . $source_path;
                         }
 
@@ -78,24 +98,27 @@ class UM_Import_Profile_Photos {
 
                     if ( substr( $source_path, 0, 8 ) == 'https://' ) {
 
-                        $content = file_get_contents( $source_path );
-                        $finfo   = new finfo( FILEINFO_MIME_TYPE );
-                        $type    = $finfo->buffer( $content );
+                        if ( $this->validate_remote_url( $source_path )) {
 
-                        switch( $type ) {
+                            $content = file_get_contents( $source_path );
+                            $finfo   = new finfo( FILEINFO_MIME_TYPE );
+                            $type    = $finfo->buffer( $content );
 
-                            case "image/gif":   $ext = 'gif'; break;
-                            case "image/jpeg":
-                            case "image/jpg":   $ext = 'jpg'; break;
-                            case "image/png":   $ext = 'png'; break;
-                            case "image/bmp":   $ext = 'bmp'; break;
-                            default:            $ext = 'xxx'; break;
-                        }
+                            switch( $type ) {
 
-                        if ( in_array( $ext, $this->supported_exts )) {
- 
-                            $this->remove_current_profile_photos( $user_path );
-                            $result = file_put_contents( $user_path . 'profile_photo.' . $ext, $content );
+                                case "image/gif":   $ext = 'gif'; break;
+                                case "image/jpeg":
+                                case "image/jpg":   $ext = 'jpg'; break;
+                                case "image/png":   $ext = 'png'; break;
+                                case "image/bmp":   $ext = 'bmp'; break;
+                                default:            $ext = 'xxx'; break;
+                            }
+
+                            if ( in_array( $ext, $this->supported_exts )) {
+
+                                $this->remove_current_profile_photos( $user_path );
+                                $result = file_put_contents( $user_path . 'profile_photo.' . $ext, $content );
+                            }
                         }
                     }
 
@@ -111,6 +134,8 @@ class UM_Import_Profile_Photos {
                 }
             }
         }
+
+        return $args;
     }
 
     public function create_resized_profile_photos( $user_path, $ext ) {
@@ -193,6 +218,25 @@ class UM_Import_Profile_Photos {
         return true;
     }
 
+    public function validate_remote_url( $source_path ) {
+
+        $valid = false;
+        $valid_urls = array_map( 'sanitize_text_field', array_map( 'trim', explode( "\n", UM()->options()->get( 'profile_import_photo_url' ))));
+
+        if ( is_array( $valid_urls ) && ! empty( $valid_urls )) {
+
+            foreach( $valid_urls as $valid_url ) {
+
+                if ( ! empty( $valid_url ) && substr( $source_path, 0, strlen( $valid_url )) == $valid_url ) {
+                    $valid = true;
+                    break;
+                }
+            }
+        }
+
+        return $valid;
+    }
+
     public function remove_current_profile_photos( $user_path ) {
 
         $matches = glob( $user_path . 'profile_photo*', GLOB_MARK );
@@ -246,6 +290,10 @@ class UM_Import_Profile_Photos {
 
         $prefix = '&nbsp; * &nbsp;';
 
+        if ( UM()->options()->get( 'profile_import_photo_reuse_key' ) == 1 && UM()->options()->get( 'disable_profile_photo_upload' ) != 1 ) {
+            UM()->options()->update( 'disable_profile_photo_upload', 1 );
+        }
+
         $settings_structure['appearance']['sections']['']['form_sections']['import_profile_photos']['title'] = esc_html__( 'Import Profile Photos', 'ultimate-member' );
         $settings_structure['appearance']['sections']['']['form_sections']['import_profile_photos']['description'] = $this->get_possible_plugin_update( 'import_profile_photos' );
 
@@ -258,6 +306,13 @@ class UM_Import_Profile_Photos {
                             );
 
         $settings_structure['appearance']['sections']['']['form_sections']['import_profile_photos']['fields'][] = array(
+                                'id'             => 'profile_import_photo_url',
+                                'type'           => 'textarea',
+                                'label'          => $prefix . esc_html__( 'Valid URLs for User Profile photo source address', 'ultimate-member' ),
+                                'description'    => esc_html__( "Enter valid URLs for Profile photo source address one per line.", 'ultimate-member' ),
+                            );
+
+        $settings_structure['appearance']['sections']['']['form_sections']['import_profile_photos']['fields'][] = array(
                                 'id'             => 'profile_import_photo_reuse_key',
                                 'type'           => 'checkbox',
                                 'label'          => $prefix . esc_html__( 'Reuse Meta_key with Profile photo source address', 'ultimate-member' ),
@@ -267,6 +322,28 @@ class UM_Import_Profile_Photos {
         return $settings_structure;
     }
 
+    public function predefined_fields_hook_import_profile_photos( $predefined_fields ) {
+
+        $title = esc_html__( 'Import Profile Photo', 'ultimate-member' );
+        $meta_key = sanitize_text_field( UM()->options()->get( 'profile_import_photo_key' ));
+
+        if ( ! empty( $meta_key )) {
+
+            $predefined_fields[$meta_key] = array(
+                                                    'title'    => $title,
+                                                    'metakey'  => $meta_key,
+                                                    'type'     => 'text',
+                                                    'label'    => $title,
+                                                    'required' => 0,
+                                                    'public'   => 1,
+                                                    'editable' => true,
+                                                );
+        }
+
+        return $predefined_fields;
+    }
+
 }
 
 new UM_Import_Profile_Photos();
+
