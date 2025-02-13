@@ -2,7 +2,7 @@
 /**
  * Plugin Name:         Ultimate Member - Import Profile Photos
  * Description:         Extension to Ultimate Member for importing Profile photos.
- * Version:             1.1.0
+ * Version:             1.2.0
  * Requires PHP:        7.4
  * Author:              Miss Veronica
  * License:             GPL v3 or later
@@ -12,7 +12,7 @@
  * Update URI:          https://github.com/MissVeronica/um-import-profile-photos
  * Text Domain:         ultimate-member
  * Domain Path:         /languages
- * UM version:          2.9.2
+ * UM version:          2.10.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit; 
@@ -253,18 +253,18 @@ class UM_Import_Profile_Photos {
 
     public function get_um_filesystem( $function ) {
 
-        if ( version_compare( ultimatemember_version, '2.9.3' ) == -1 ) {
+        if ( method_exists( UM()->common()->filesystem(), 'get_basedir' ) ) {
 
             switch( $function ) {
-                case 'base_dir': $value = UM()->uploader()->get_upload_base_dir(); break;
-                case 'base_url': $value = UM()->uploader()->get_upload_base_url(); break;
+                case 'base_dir': $value = UM()->common()->filesystem()->get_basedir(); break;
+                case 'base_url': $value = UM()->common()->filesystem()->get_baseurl(); break;
             }
 
         } else {
 
             switch( $function ) {
-                case 'base_dir': $value = UM()->common()->filesystem()->get_basedir(); break;
-                case 'base_url': $value = UM()->common()->filesystem()->get_baseurl(); break;
+                case 'base_dir': $value = UM()->uploader()->get_upload_base_dir(); break;
+                case 'base_url': $value = UM()->uploader()->get_upload_base_url(); break;
             }
         }
 
@@ -280,7 +280,7 @@ class UM_Import_Profile_Photos {
                                         esc_html__( 'GitHub plugin documentation and download', 'ultimate-member' ),
                                         esc_html__( 'Documentation', 'ultimate-member' ));
 
-        $description = sprintf( esc_html__( 'Plugin "Import Profile Photos" version %s - tested with UM 2.9.2 - %s', 'ultimate-member' ),
+        $description = sprintf( esc_html__( 'Plugin "Import Profile Photos" version %s - tested with UM 2.10.0 - %s', 'ultimate-member' ),
                                                                             $plugin_data['Version'], $documention );
 
         return $description;
