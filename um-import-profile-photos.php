@@ -2,7 +2,7 @@
 /**
  * Plugin Name:         Ultimate Member - Import Profile Photos
  * Description:         Extension to Ultimate Member for importing Profile photos.
- * Version:             1.2.0
+ * Version:             1.3.0
  * Requires PHP:        7.4
  * Author:              Miss Veronica
  * License:             GPL v3 or later
@@ -58,7 +58,9 @@ class UM_Import_Profile_Photos {
         $user_id = um_user( 'ID' );
         $profile_photo = get_user_meta( $user_id, 'profile_photo', true );
 
-        if ( empty( $profile_photo ) || UM()->options()->get( 'profile_import_photo_reuse_key' ) == 1 ) {
+        if ( empty( $profile_photo ) || 
+             UM()->options()->get( 'profile_import_photo_reuse_key' ) == 1 || 
+             substr( $profile_photo, 0, 13 ) != 'profile_photo' ) {
 
             $user_path = $this->get_um_filesystem( 'base_dir' ) . $user_id . DIRECTORY_SEPARATOR;
 
@@ -346,4 +348,5 @@ class UM_Import_Profile_Photos {
 }
 
 new UM_Import_Profile_Photos();
+
 
