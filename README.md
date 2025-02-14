@@ -1,4 +1,4 @@
-# UM Import Profile Photos - version 1.2.0
+# UM Import Profile Photos - version 1.3.0
 Extension to Ultimate Member for importing Profile photos. When importing Users via a CSV file the path/URL to the User's profile photo can be saved from a CSV column with the address of the Profile photo. The column header name is the Ultimate Member meta_key name.
 
 ## UM Settings -> Appearance -> Profile -> Import Profile Photos
@@ -29,6 +29,7 @@ Images are saved with Quality according to UM Settings -> General -> Uploads -> 
 ## Updates
 1. Version 1.1.0 Validation of URLs. UM predefined forms field. UM editing is disabled and less photo updates when Reuse Meta_key is active.
 2. Version 1.2.0 Update required for UM Version 2.10.0
+3. Version 1.3.0 Fix for unknown content in the meta_key profile_photo.
 
 ## Image Moderation - Account File Manager
 Profile/Cover photo updates and other uploaded files can be displayed with the <a href="https://github.com/MissVeronica/um-account-file-manager">UM Account File Manager</a> plugin
